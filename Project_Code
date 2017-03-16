@@ -1,0 +1,130 @@
+#include <LiquidCrystal.h>
+
+/*Declaring global variables, the Led is the digital output pin
+ * from the Arduino which provides power to the LED circuit.
+ * The buttonpin is the second digital pin on the Arduino
+ * that reads in the value of the digital output from the flame
+ * sensor. Val is the digital value of the digital output from
+ * the flame sensor. speakerout is the digital pin that controls
+ * the output of the piezo speaker. outTime is used to display
+ * the time since a fire on the LCD screen.
+ */
+int Led = 4;
+int buttonpin = 2;
+int val;
+int speakerOut = 5;
+int counter = 0;
+int outTime = 0;
+
+LiquidCrystal lcd(7, 8, 9, 10, 11, 12);
+void setup()
+//Pin initializations
+{
+  pinMode(Led, OUTPUT);
+  pinMode(buttonpin, INPUT);
+  pinMode(speakerOut, OUTPUT);
+  lcd.begin(16, 2);
+  Serial.begin(9600);
+}
+
+
+void loop()
+{
+  start://Start of the loop, used to restart the loop after
+  //the goodbye prompt is reached on the LCD screen.
+  val = digitalRead(buttonpin);
+    //If a flame is detected (digital output from flame sensor
+    //low, check to see if a flame is detected for five seconds
+    //then call fire method, once method is run, go to start.
+     if(val==LOW){
+      while (val == LOW) {
+        counter++;
+        delay(1000);
+        if (counter == 5) {
+          outTime=0;
+          counter = 0;
+          Fire();
+          goto start;
+        }
+      } 
+   }else
+    {   /*Turns off the LED when no flame is detected, clears
+      the LCD screen and prints No fire for: on the first line
+      and then the number of time since the sensor has gone
+      off on the second line.
+      While it is counting up, if a flame is detected, it breaks
+      out of the loop, but this is only noticeable if the flame
+      has been lit for 5 seconds.
+      */
+      
+        digitalWrite(Led, LOW);
+          lcd.clear();
+          lcd.setCursor(0, 0);
+          lcd.print("No fire for: ");
+          while(val==HIGH){
+            lcd.setCursor(0, 1);
+            outTime++;
+            lcd.print(outTime);
+            lcd.setCursor(4,1);
+            lcd.print("seconds");
+            delay(1000);
+            int check = digitalRead(buttonpin);
+            if(check==LOW) break;
+          }
+          
+     }
+}
+ 
+void Fire(){
+  //Clears the lcd
+lcd.clear();
+      //Prints fire on the first line of the LCD then
+      //clear room on the second line.
+      lcd.setCursor(0,0);
+      lcd.print("Fire!!!!");
+      lcd.setCursor(0,1);
+      lcd.print("Clear room");
+      lcd.setCursor(12,1);
+        /*Loop used to display the countdown on the screen
+         * as well as the blinking of the LED and sounding
+         * of the piezo. The LED and piezo turn on and off
+         * at half second intervals
+         * 
+         * After the initial display, a prompt will come
+         * across the screen reading Time until death
+         * and then will shift left off of the screen while a counter
+         * counts down on the second line.
+         */
+        for(int count = 0; count < 12; count++){
+              digitalWrite(Led,HIGH);
+              analogWrite(speakerOut,HIGH);
+              delay(500);
+              digitalWrite(Led,LOW);
+              analogWrite(speakerOut,LOW);
+              delay(500);
+              if(count==0){
+                lcd.display();
+                lcd.clear();
+                lcd.setCursor(0,0);
+                lcd.print("Fire!!!!");
+                lcd.setCursor(0,1);
+                lcd.print("Time until death");
+                delay(500);
+              digitalWrite(Led,HIGH);
+              analogWrite(speakerOut,HIGH);
+               }
+              lcd.scrollDisplayLeft();
+              lcd.setCursor(17,1);
+              int countdown = 9 - count;
+              lcd.print(countdown);
+              lcd.setCursor(13,1);
+                  if(count == 10){
+                    lcd.clear();
+                    lcd.setCursor(0,0);
+                    lcd.print("Goodbye");
+                    lcd.setCursor(0,1);
+                    lcd.print("(x_x)");
+                  }
+              count = count++;
+        }
+      }
